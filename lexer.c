@@ -43,6 +43,39 @@ Token getNextToken( )
        // printf("Current character: %c\n", ch);
         if(isspace(ch))
             continue;
+        else if(ch =='#')
+        {
+            while((ch=getc(fp))!=EOF && ch!='\n');
+            continue;
+        }
+        else if(ch =='/')
+        {
+            if((ch=getc(fp))=='/')
+            {
+                while((ch=getc(fp))!=EOF && ch!='\n');
+                continue;
+            }
+            else if(ch=='*')
+            {
+                while((ch=getc(fp))!=EOF)
+                {
+                    if(ch=='*')
+                    {
+                        if((ch=getc(fp))=='/')
+                            break;
+                        else
+                            ungetc(ch,fp);
+                    }
+                }
+                continue;
+            }
+            else
+            {
+                ungetc(ch,fp);
+            }
+        }
+
+        
         else if(isalpha(ch) || ch=='_')
         {
             int i=0;
