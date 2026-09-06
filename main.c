@@ -1,17 +1,26 @@
 #include <stdio.h>
 #include "lexer.h"
 FILE* fp;
-
-int main(int argc, char *argv[]) {
+extern int errorflag;
+extern int linecount;
+extern int openbracketscount;
+extern int closebracketscount;
+int main(int argc, char *argv[]) 
+{
+    extern int errorflag;
+extern int linecount;
+extern int openbracketscount;
+extern int closebracketscount;
    //initializeLexer(argv[1]);
 
-   fp = fopen("source.txt", "r");
-    if (!fp) {
+   fp = fopen(argv[1], "r");
+    if (!fp) 
+    {
         printf("Failed to open file");
         return 1;
     }
     Token token;
-    while((token = getNextToken()).type != TOKEN_EOF)
+    while((token = getNextToken()).type != TOKEN_EOF && errorflag==0)
     {
         char* typename;
         switch(token.type)
@@ -48,6 +57,11 @@ int main(int argc, char *argv[]) {
         printf("\nToken: %s\t|\t Type: %s\n", token.lexeme, typename);
         
     }
+    if(openbracketscount != closebracketscount)
+    {
+        printf("\nError: Mismatched brackets detected. Open brackets count: %d, Close brackets count: %d\n", openbracketscount, closebracketscount);
+    }
+    fclose(fp);
 
     return 0;
 }

@@ -1,7 +1,7 @@
 #ifndef LEXER_H
 #define LEXER_H
 
-#define MAX_KEYWORDS 21
+#define MAX_KEYWORDS 33
 #define MAX_TOKEN_SIZE 100
 
 typedef enum {

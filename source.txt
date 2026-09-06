@@ -1,23 +1,227 @@
-#include<stdio.h>
+#include <stdio.h>
 
-void  pika(){
-    printf("pika 'pikaa'\n");
+int global_count = 0;
+const int HEX_MASK = 0xABF0;
+
+/* =========================================================
+   LEXER STRESS TEST
+
+   Tests:
+   - keywords
+   - identifiers
+   - decimal / hex / binary / octal
+   - floating constants
+   - negative constants
+   - strings
+   - character literals
+   - comments
+   - arithmetic operators
+   - relational operators
+   - logical operators
+   - bitwise operators
+   - increment/decrement
+   - assignment operators
+   - brackets
+   - difficult operator adjacency
+   ========================================================= */
+
+void pika_test(int value)
+{
+    int normal = 123;
+    int zero = 0;
+    int negative = -42;
+
+    int hex1 = 0xABF0;
+    int hex2 = 0X12AC;
+
+    int binary1 = 0b1010;
+    int binary2 = 0B110011;
+
+    int octal1 = 07;
+    int octal2 = 0777;
+
+    float f1 = 3.15;
+    float f2 = 0.25;
+    float f3 = 10.0;
+    float f4 = -9.81;
+
+    char ch1 = 'A';
+    char ch2 = '7';
+
+    char message[] = "Hello Lexer";
+    char mixed[] = "pika 'pikaa' 123 + - * /";
+    char escaped[] = "Hello\nWorld\tLexer";
+
+    printf("value = %d\n", value);
+
+    /* Normal arithmetic */
+
+    value = value + 10;
+    value = value - 5;
+    value = value * 2;
+    value = value / 3;
+    value = value % 7;
+
+    /*
+       IMPORTANT:
+       Tests whether '/' survives when it is NOT a comment.
+    */
+
+    int division = value/2;
+
+    /*
+       Tests subtraction versus your negative-number handling.
+    */
+
+    int subtraction = value-1;
+    int negative_again = -1;
+
+    /*
+       Increment / decrement
+    */
+
+    value++;
+    value--;
+
+    /*
+       Assignment operators
+    */
+
+    value += 5;
+    value -= 2;
+    value *= 3;
+    value /= 2;
+    value %= 4;
+
+    /*
+       Relational operators
+    */
+
+    if (value == 10)
+        value = 1;
+
+    if (value != 10)
+        value = 2;
+
+    if (value <= 100)
+        value = 3;
+
+    if (value >= 0)
+        value = 4;
+
+    if (value < 50)
+        value = 5;
+
+    if (value > 20)
+        value = 6;
+
+    /*
+       Logical operators
+    */
+
+    if (value > 0 && value < 100)
+        value++;
+
+    if (value == 0 || value == 1)
+        value--;
+
+    if (!value)
+        value = 10;
+
+    /*
+       Bitwise operators
+    */
+
+    value = value & 0x0F;
+    value = value | 0x10;
+    value = value ^ 0x03;
+
+    value = value << 2;
+    value = value >> 1;
+
+    /*
+       Deliberately remove spaces around operators.
+       These are excellent getc()/ungetc() tests.
+    */
+
+    normal=normal+1;
+    normal=normal-1;
+    normal=normal*2;
+    normal=normal/2;
+
+    normal++;
+    normal--;
+
+    normal+=10;
+    normal-=10;
+
+    /*
+       Identifier tests
+    */
+
+    int student_count = 10;
+    int _private_value = 20;
+    int value123 = 30;
+    int abc123_xyz = 40;
+
+    /*
+       Nested brackets
+    */
+
+    if ((normal > 0) && (student_count < 100))
+    {
+        int array[5];
+
+        array[0] = 10;
+        array[1] = 20;
+        array[2] = 30;
+
+        normal = array[(1 + 1)];
+    }
+
+    /*
+       Single-line comment:
+       ++ -- += -= && || 0xFFFF should ALL be ignored here.
+    */
+
+    // value++; value = 0xFFFF; value && value || value;
+
+    /*
+       Multi-line comment test.
+
+       int fake = 999;
+       fake++;
+       "fake string"
+       'Z'
+       0b111111
+       0777
+    */
 
     return;
 }
+
+
 int main()
 {
-    int num = 1;
-    float z = 3.15;
-    char ch = 'A';
-    printf("The value of num is 1");
+    int x = 0;
 
-    int x =0;
+    pika_test(x);
+
     x++;
 
+    x = x + 1;
+    x = x-1;
+
+    x = -1;
+
     x^-1;
-return 0;
+
+    x = (x + 5) * (10 - 3) / 7;
+
+    if (x >= 0 && x != 100)
+    {
+        printf("Lexer test successful\n");
+    }
+
+    return 0;
 }
-
-
-

@@ -10,21 +10,28 @@ Token character categories - identifier=-1(Default value)
 3 - Operators (+, -, *, /, %, =, <, >, |, &) - single or double operators
 4 - Special Characters (,, ;, {, }, (, ), [, ])
 */
-
+// printf("\nError in Line %d, Error: %s\n", linecount, buffer);
 static const char* keywords[MAX_KEYWORDS] = 
 {
     "int", "float", "return", "if", "else", "while", "for", "do", "break", "continue",
-    "char", "double", "void", "switch", "case", "default", "const", "static", "sizeof", "struct", "main",
+    "char", "double", "void", "switch", "case", "default", "const", "static", "sizeof", "struct", "typedef", "enum","volatile","register","extern","goto","union","signed","unsigned",
+    "auto","inline","long","short"
 };
+static int linecount=1;
 
-static const char* singleoperators = "+-*/%=!<>|&^";
-static const char* doubleoperators[15] = 
+static const char* singleoperators = "+-*/%=!<>.|&^~";
+static const char* doubleoperators[19] = 
 {
-    "==","++","--","+=",">>","<<","<=",">=","!="
+    "==","++","--","+=",">>","<<","<=",">=","!=","&&","||","&=","|=","^=","->","-=","*=","/=","%="
 };
 static const char* specialCharacters = ",;{}()[]";
+static const char* openbrackets = "{([";
+static const char* closebrackets = "})]";
+ int openbracketscount=0;
+ int closebracketscount=0;
 
 char currentChar;
+int errorflag=0;
 short int identifier=-1;
  int ch;
 char buffer[MAX_TOKEN_SIZE];
@@ -32,14 +39,17 @@ extern FILE* fp;
 int i=10;
 Token getNextToken( )
 {
-    printf("Getting next token\n");
+   // printf("Getting next token\n");
     while((ch=getc(fp))!=EOF)
     {
         for(int j = 0; j < MAX_TOKEN_SIZE; j++) 
         {
             buffer[j] = '\0'; // Clear the buffer
         }
-
+        if(ch == '\n') 
+        {
+            linecount++;
+        }
        // printf("Current character: %c\n", ch);
         if(isspace(ch))
             continue;
@@ -54,11 +64,16 @@ Token getNextToken( )
             {
                 while((ch=getc(fp))!=EOF && ch!='\n');
                 continue;
+                linecount++;
             }
             else if(ch=='*')
             {
                 while((ch=getc(fp))!=EOF)
                 {
+                    if(ch=='\n')
+                    {
+                        linecount++;
+                    }
                     if(ch=='*')
                     {
                         if((ch=getc(fp))=='/')
@@ -66,39 +81,199 @@ Token getNextToken( )
                         else
                             ungetc(ch,fp);
                     }
+                    continue;
                 }
-                continue;
+                
+            }
+            else if(ch == '=')
+            {
+                Token token;
+
+                buffer[0] = '/';
+                buffer[1] = '=';
+                buffer[2] = '\0';
+
+                strcpy(token.lexeme, buffer);
+                categorizeToken(&token, 3);
+
+                return token;
             }
             else
             {
-                ungetc(ch,fp);
-            }
+                if(ch != EOF)
+                    ungetc(ch, fp);
+
+                Token token;
+
+                buffer[0] = '/';
+                buffer[1] = '\0';
+
+                strcpy(token.lexeme, buffer);
+                categorizeToken(&token, 3);
+
+                return token;
+    
+}
         }
 
         
-        else if(isalpha(ch) || ch=='_')
+        else if(isalpha(ch) || ch=='_' || ch=='$')
         {
             int i=0;
             buffer[i++]=ch;
-            while((ch=getc(fp))!=EOF && (isalnum(ch)))
+            while((ch=getc(fp))!=EOF && (isalnum(ch) || ch=='_' || ch=='$'))
                 {
                     buffer[i]=ch;
                      i++;
                 }
+                
               if(ch != EOF)  ungetc(ch, fp);  
             buffer[i]='\0';
-           printf("Buffer = %s\n",buffer);
+          // printf("Buffer = %s\n",buffer);
             
-            printf("before token");
+          //  printf("before token");
             Token token;
             strcpy(token.lexeme,buffer);
-             printf("Token = %s, ",token.lexeme);
+          //  printf("Token = %s, ",token.lexeme);
             categorizeToken(&token,1);
          
             return token;
         }
+        
+        else if(ch=='-')
+        {
+            if(isdigit(ch=getc(fp)))
+            {
+                int i=0,dotflag=0;
+                buffer[i++]='-';
+                buffer[i++]=ch;
+                while((ch=getc(fp))!=EOF &&( isdigit(ch) ||(ch=='.' && dotflag==0)))
+                    {
+                        if(ch=='.') dotflag=1;
+                        buffer[i]=ch;
+                         i++;
+                    }
+                buffer[i]='\0';
+                ungetc(ch,fp);
+                Token token;
+                strcpy(token.lexeme,buffer);
+                categorizeToken(&token,2);
+                return token;
+            }
+            else
+            {
+                        ungetc(ch,fp);
+               if(strchr(singleoperators,ch))
+                {
+                // printf("Entered singl operator part\n");
+                    Token token;
+                    buffer[0]=ch;
+                    if(strchr(singleoperators,ch=getc(fp)))
+                    {
+                    // printf("In if condition");
+                        buffer[1]=ch;
+                        buffer[2]='\0';
+                        for(int j=0;j<19;j++)
+                        {
+                            //printf("in for loop");
+                            if(strcmp(doubleoperators[j],buffer)==0)
+                            {
+                                strcpy(token.lexeme,buffer);
+                                categorizeToken(&token,3);
+                                return token;
+                            }
+                        
+                        }
+
+                    }
+                    //printf("Reached here");
+                    ungetc(ch,fp);
+                    buffer[1]='\0';
+                    strcpy(token.lexeme,buffer);
+                    categorizeToken(&token,3);
+                    return token;
+                 }
+            }
+
+        }
         else if(isdigit(ch))
         {
+                        if(ch=='0')
+                        {
+                            ch=getc(fp);
+                            if(ch=='x' || ch=='X')
+                            {
+                                int i=0;
+                                buffer[i++]='0';
+                                buffer[i++]=ch;
+                                while((ch=getc(fp))!=EOF && (isxdigit(ch)))
+                                    {
+                                        buffer[i]=ch;
+                                        i++;
+                                    }
+                                buffer[i]='\0';
+                                ungetc(ch,fp);
+                                Token token;
+                                strcpy(token.lexeme,buffer);
+                                categorizeToken(&token,2);
+                                return token;
+                            }
+                            
+                            else if(ch=='b' || ch=='B')
+                            {
+                                int i=0;
+                                buffer[i++]='0';
+                                buffer[i++]=ch;
+                                while((ch=getc(fp))!=EOF && (ch=='0' || ch=='1'))
+                                    {
+                                        buffer[i]=ch;
+                                        i++;
+                                    }
+                                buffer[i]='\0';
+                                ungetc(ch,fp);
+                                Token token;
+                                strcpy(token.lexeme,buffer);
+                                categorizeToken(&token,2);
+                                return token;
+                            }
+                            
+                            else if(ch<= '7' && ch>='0')
+                            {
+                                int i=0;
+                                buffer[i++]='0';
+                                buffer[i++]=ch;
+                                while(((ch=getc(fp))!=EOF) && ((ch<='7' && ch>='0'))||((ch=='.')||ch==' '))
+                                    {
+                                        buffer[i]=ch;
+                                        i++;
+                                    }
+                                    if(isdigit(ch))
+                                    {
+                                        buffer[i]='\0';
+                                        Token token;
+                                        strcpy(token.lexeme,buffer);
+                                        printf("\nError in Line %d, Error: %s \n", linecount, buffer);
+                                        errorflag=1;    
+                                        //error : invalid octal number
+                                        categorizeToken(&token,8);
+                                        return token;
+                                    }
+
+                                buffer[i]='\0';
+                                ungetc(ch,fp);
+                                Token token;
+                                strcpy(token.lexeme,buffer);
+                                categorizeToken(&token,2);
+                                return token;
+                            }
+                            else
+                            {
+                                ungetc(ch,fp);
+                                ch='0';
+                            }
+
+                        }
+                    
             int i=0,dotflag=0;
             buffer[i++]=ch;
             while((ch=getc(fp))!=EOF &&( isdigit(ch) ||(ch=='.' && dotflag==0)))
@@ -116,17 +291,17 @@ Token getNextToken( )
         }
         else if(strchr(singleoperators,ch))
         {
-            printf("Entered singl operator part\n");
+           // printf("Entered singl operator part\n");
             Token token;
             buffer[0]=ch;
             if(strchr(singleoperators,ch=getc(fp)))
             {
-                printf("In if condition");
+               // printf("In if condition");
                 buffer[1]=ch;
                 buffer[2]='\0';
-                for(int j=0;j<9;j++)
+                for(int j=0;j<19;j++)
                 {
-                     printf("in for loop");
+                     //printf("in for loop");
                     if(strcmp(doubleoperators[j],buffer)==0)
                     {
                         strcpy(token.lexeme,buffer);
@@ -137,7 +312,7 @@ Token getNextToken( )
                 }
 
             }
-            printf("Reached here");
+            //printf("Reached here");
             ungetc(ch,fp);
             buffer[1]='\0';
             strcpy(token.lexeme,buffer);
@@ -146,6 +321,14 @@ Token getNextToken( )
         }
         else if(strchr(specialCharacters,ch))
         {
+            if(strchr(openbrackets,ch))
+            {
+                openbracketscount++;
+            }
+            if(strchr(closebrackets,ch))
+            {
+                closebracketscount++;
+            }
             Token token;
             buffer[0]=ch;
             buffer[1]='\0';
@@ -160,6 +343,13 @@ Token getNextToken( )
             buffer[0]=ch;
             while((ch=getc(fp)) != '"' )
             {
+                if(ch==EOF || ch=='\n')
+                {
+                     printf("\nError in Line %d, Error: %s \n", linecount, buffer);
+                     errorflag=1;
+                    categorizeToken(&token,8);
+                    return token;
+                }
                 buffer[i]=ch;
                 i++;
             }
@@ -169,13 +359,11 @@ Token getNextToken( )
             categorizeToken(&token,5);
             return token;
         } 
-        else if((int)ch == 39)
+        else if((int)ch == 39) // single quot
         {
             int i=0;
             buffer[i]=ch; i++;
             while((ch=getc(fp))!=39)
-
-
             {
 
                 buffer[i]=ch;
@@ -184,6 +372,22 @@ Token getNextToken( )
             }
             buffer[i]=ch; i++;
             buffer[i]='\0';
+            if(strlen(buffer)!=3)
+            {
+                printf("\nError in Line %d, Error: %s \n", linecount, buffer);
+                errorflag=1;
+                Token token;
+                categorizeToken(&token,8);
+                return token;
+            }
+        
+            else
+            {
+                Token token;
+                strcpy(token.lexeme,buffer);
+                categorizeToken(&token,6);
+                return token;
+            }
             Token token;
             strcpy(token.lexeme,buffer);
             categorizeToken(&token,6);
@@ -207,12 +411,13 @@ Token getNextToken( )
                strcpy(token.lexeme,"");
                token.type=TOKEN_EOF;
                return token;
-   
-    
 }
+    
+
 
 void categorizeToken(Token* token, short int category)
 {
+    token->type = UNKNOWN;
     switch(category)
     {
         int res;
@@ -279,7 +484,7 @@ int isOperator(const char* str)
     }
     else
     {
-        for(int j=0;j<9;j++)
+        for(int j=0;j<19;j++)
         {
             if(strcmp(str,doubleoperators[j])==0)
             {
@@ -290,38 +495,145 @@ int isOperator(const char* str)
     return 0; //not operator
 
 }
-int isSpecialCharacter(char ch)
-{
-  //  printf("Checking if '%c' is a special character\n", ch);
-}
-int isConstant(const char* str)
-{
-    int isConstant(const char *str)
+int isConstant(const char *str)
 {
     int i = 0;
+    int dotCount = 0;
 
-    if(str[0] == '\0')
+    /* Empty string */
+    if (str[0] == '\0')
         return 0;
 
-    while(str[i] != '\0')
+    /* Optional negative sign */
+    if (str[i] == '-')
     {
-        if(!isdigit((unsigned char)str[i]))
+        i++;
+
+        /* Only "-" is not a constant */
+        if (str[i] == '\0')
+            return 0;
+    }
+
+    /* -------------------------------------------------
+       HEXADECIMAL CONSTANT
+       ------------------------------------- */
+    if (str[i] == '0' &&
+        (str[i + 1] == 'x' || str[i + 1] == 'X'))
+    {
+        i += 2;
+
+        /* At least one hexadecimal digit required */
+        if (str[i] == '\0')
             return 0;
 
+        while (str[i] != '\0')
+        {
+            if (!isxdigit((unsigned char)str[i]))
+                return 0;
+
+            i++;
+        }
+
+        return 1;
+    }
+
+    /* -------------------------------------------------
+       BINARY CONSTANT
+       
+       ------------------------------------------------- */
+    if (str[i] == '0' &&
+        (str[i + 1] == 'b' || str[i + 1] == 'B'))
+    {
+        i += 2;
+
+        /* At least one binary digit required */
+        if (str[i] == '\0')
+            return 0;
+
+        while (str[i] != '\0')
+        {
+            if (str[i] != '0' && str[i] != '1')
+                return 0;
+
+            i++;
+        }
+
+        return 1;
+    }
+
+    /* -------------------------------------------------
+       OCTAL CONSTANT
+       
+       ------------------------------------------------- */
+    if (str[i] == '0' &&
+        isdigit((unsigned char)str[i + 1]))
+    {
         i++;
+
+        while (str[i] != '\0')
+        {
+            if (str[i] < '0' || str[i] > '7')
+                return 0;
+
+            i++;
+        }
+
+        return 1;
+    }
+
+    /* -------------------------------------------------
+       DECIMAL / FLOATING POINT CONSTANT
+      
+       ------------------------------------------------- */
+
+    while (str[i] != '\0')
+    {
+        if (isdigit((unsigned char)str[i]))
+        {
+            i++;
+        }
+        else if (str[i] == '.')
+        {
+            dotCount++;
+
+            /* More than one decimal point */
+            if (dotCount > 1)
+                return 0;
+
+            /*
+             * Require a digit after the decimal point.
+             * Therefore:
+             * 12.   -> invalid
+             * 12.5  -> valid
+             */
+            if (!isdigit((unsigned char)str[i + 1]))
+                return 0;
+
+            i++;
+        }
+        else
+        {
+            /* Any other character makes it invalid */
+            return 0;
+        }
     }
 
     return 1;
 }
 
-}
+
+
 
 int isIdentifier(const char* str)
 {
      int i = 0;
 
-    if(!(isalpha((unsigned char)str[0]) || str[0] == '_'))
+    if(!(isalpha((unsigned char)str[0]) || str[0] == '_' || str[0] == '$'))
+    {
+        printf("\nError in Line %d, Error: %s \n", linecount, str);
+        errorflag=1;
         return 0;
+    }
 
     i++;
 
@@ -335,4 +647,13 @@ int isIdentifier(const char* str)
 
     return 1;
   //  printf("Checking if '%s' is an identifier\n", str);
+}
+
+int isSpecialCharacter(char ch)
+{
+    if (strchr(specialCharacters, ch)) 
+    {
+        return 1; // It's a special character
+    }
+    return 0; // Not a special character
 }
