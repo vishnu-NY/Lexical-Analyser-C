@@ -62,6 +62,9 @@ void pika_test(int value)
     value = value / 3;
     value = value % 7;
 
+    //************************************************************************************************************************************************
+    1value = 5;
+
     /*
        IMPORTANT:
        Tests whether '/' survives when it is NOT a comment.

@@ -19,6 +19,8 @@ static const char* keywords[MAX_KEYWORDS] =
 };
 static int linecount=1;
 
+int previoustoken=-1;
+
 static const char* singleoperators = "+-*/%=!<>.|&^~";
 static const char* doubleoperators[19] = 
 {
@@ -29,6 +31,7 @@ static const char* openbrackets = "{([";
 static const char* closebrackets = "})]";
  int openbracketscount=0;
  int closebracketscount=0;
+ char temp=0;
 
 char currentChar;
 int errorflag=0;
@@ -142,7 +145,7 @@ Token getNextToken( )
         
         else if(ch=='-')
         {
-            if(isdigit(ch=getc(fp)))
+            if(isdigit(ch=getc(fp)) && previoustoken!=5)
             {
                 int i=0,dotflag=0;
                 buffer[i++]='-';
@@ -163,6 +166,7 @@ Token getNextToken( )
             else
             {
                         ungetc(ch,fp);
+                        ch='-';
                if(strchr(singleoperators,ch))
                 {
                 // printf("Entered singl operator part\n");
@@ -266,17 +270,61 @@ Token getNextToken( )
                                 categorizeToken(&token,2);
                                 return token;
                             }
+                            else if(strchr(singleoperators,ch) || strchr(specialCharacters,ch) || ch==' ' || ch=='\n')
+                            {
+                                ungetc(ch,fp);
+                                ch='0';
+                                Token token;
+                                buffer[0]='0';
+                                buffer[1]='\0';
+                                strcpy(token.lexeme,buffer);
+                                categorizeToken(&token,2);
+                                return token;
+                            }
                             else
                             {
                                 ungetc(ch,fp);
                                 ch='0';
+                                printf("Error in Line %d, Error: Invalid number format\n", linecount);
+                                errorflag=1;
+                                Token token;
+                                buffer[0]='0';
+                                buffer[1]='\0';
+                                strcpy(token.lexeme,buffer);
+                                categorizeToken(&token,8);
+                                return token;
                             }
 
                         }
                     
             int i=0,dotflag=0;
             buffer[i++]=ch;
-            while((ch=getc(fp))!=EOF &&( isdigit(ch) ||(ch=='.' && dotflag==0)))
+            temp=ch;
+            if(!(isdigit(ch=getc(fp))) && (!(strchr(singleoperators,ch))) && (!(strchr(specialCharacters,ch))) )
+            {
+                buffer[i++]=ch;
+                while(isalnum(ch=getc(fp)))
+                {
+                    buffer[i]=ch;
+                     i++;
+                }
+                buffer[i]='\0';
+
+                printf("\nError in Line %d, Error: %s \n", linecount, buffer);
+                printf("Error: Invalid number format from isdigit section\n");
+                errorflag=1;
+                Token token;
+                strcpy(token.lexeme,buffer);
+                categorizeToken(&token,8);
+                return token;
+            }
+            else
+            {
+                ungetc(ch,fp);
+                ch=temp;
+            }
+
+            while((ch=getc(fp))!=EOF && ( isdigit(ch) ||(ch=='.' && dotflag==0)))
                 {
                     if(ch=='.') dotflag=1;
                     buffer[i]=ch;

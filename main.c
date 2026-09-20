@@ -5,6 +5,7 @@ extern int errorflag;
 extern int linecount;
 extern int openbracketscount;
 extern int closebracketscount;
+extern int previoustoken;
 int main(int argc, char *argv[]) 
 {
     extern int errorflag;
@@ -55,9 +56,10 @@ extern int closebracketscount;
 
         }
         printf("\nToken: %s\t|\t Type: %s\n", token.lexeme, typename);
+        previoustoken=token.type;
         
     }
-    if(openbracketscount != closebracketscount)
+    if(openbracketscount != closebracketscount && errorflag==0)
     {
         printf("\nError: Mismatched brackets detected. Open brackets count: %d, Close brackets count: %d\n", openbracketscount, closebracketscount);
     }
