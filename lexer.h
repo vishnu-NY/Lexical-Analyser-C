@@ -28,7 +28,7 @@ void categorizeToken(Token* token, short int category);
 int isKeyword(const char* str);
 int isOperator(const char* str);
 int isSpecialCharacter(char ch);
-int isConstant(const char* str);
+int isConstant( char* str);
 int isIdentifier(const char* str);
 
 #endif

@@ -55,7 +55,9 @@ Token getNextToken( )
         }
        // printf("Current character: %c\n", ch);
         if(isspace(ch))
+        {   
             continue;
+        }
         else if(ch =='#')
         {
             while((ch=getc(fp))!=EOF && ch!='\n');
@@ -116,10 +118,10 @@ Token getNextToken( )
 
                 return token;
     
-}
+
         }
 
-        
+    }
         else if(isalpha(ch) || ch=='_' || ch=='$')
         {
             int i=0;
@@ -543,7 +545,7 @@ int isOperator(const char* str)
     return 0; //not operator
 
 }
-int isConstant(const char *str)
+int isConstant(char *str)
 {
     int i = 0;
     int dotCount = 0;
@@ -572,12 +574,18 @@ int isConstant(const char *str)
 
         /* At least one hexadecimal digit required */
         if (str[i] == '\0')
+        {
+            printf("At least one hexadecimal digit required\n");
             return 0;
+        }
 
         while (str[i] != '\0')
         {
             if (!isxdigit((unsigned char)str[i]))
+            {
+                printf("Invalid hexadecimal digit %c\n", str[i]);
                 return 0;
+            }
 
             i++;
         }
@@ -596,12 +604,18 @@ int isConstant(const char *str)
 
         /* At least one binary digit required */
         if (str[i] == '\0')
+        {
+            printf("At least one binary digit required\n");
             return 0;
+        }
 
         while (str[i] != '\0')
         {
             if (str[i] != '0' && str[i] != '1')
+            {
+                printf("Invalid binary digit %c\n", str[i]);
                 return 0;
+            }
 
             i++;
         }
@@ -621,7 +635,10 @@ int isConstant(const char *str)
         while (str[i] != '\0')
         {
             if (str[i] < '0' || str[i] > '7')
+            {
+                printf("Invalid octal digit %c\n", str[i]);
                 return 0;
+            }
 
             i++;
         }
@@ -646,7 +663,10 @@ int isConstant(const char *str)
 
             /* More than one decimal point */
             if (dotCount > 1)
+            {
+                printf("More than one decimal point %s\n", str);
                 return 0;
+            }
 
             /*
              * Require a digit after the decimal point.
@@ -655,13 +675,17 @@ int isConstant(const char *str)
              * 12.5  -> valid
              */
             if (!isdigit((unsigned char)str[i + 1]))
+            {
+                printf("Digit required after decimal point in %s\n", str);
                 return 0;
+            }
 
             i++;
         }
         else
         {
             /* Any other character makes it invalid */
+            printf("Invalid character %c in %s\n", str[i], str);    
             return 0;
         }
     }
