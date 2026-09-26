@@ -26,11 +26,17 @@ static const char* doubleoperators[19] =
 {
     "==","++","--","+=",">>","<<","<=",">=","!=","&&","||","&=","|=","^=","->","-=","*=","/=","%="
 };
-static const char* specialCharacters = ",;{}()[]";
+static const char* specialCharacters = ",;:{}()[]";
 static const char* openbrackets = "{([";
 static const char* closebrackets = "})]";
  int openbracketscount=0;
  int closebracketscount=0;
+ #define MAX_BRACKET_STACK 100
+
+char bracketStack[MAX_BRACKET_STACK];
+int bracketLineStack[MAX_BRACKET_STACK];
+
+int bracketTop = -1;
  char temp=0;
 
 char currentChar;
@@ -72,6 +78,19 @@ static int appendToBuffer(int *index, int c)
     return 1;
 }
 
+static int isMatchingBracket(char open, char close)
+{
+    if(open == '(' && close == ')')
+        return 1;
+
+    if(open == '[' && close == ']')
+        return 1;
+
+    if(open == '{' && close == '}')
+        return 1;
+
+    return 0;
+}
 
 
 
@@ -268,8 +287,11 @@ Token getNextToken( )
             while((ch = getc(fp)) != EOF)
             {
                 /* '.' belongs to a possible number, so do not stop on it. */
-                if(ch != '.' && isCandidateDelimiter(ch))
+                if((ch != '.' && isCandidateDelimiter(ch)))
+                {
+                    ungetc(ch, fp);
                     break;
+                }
 
                 if(!appendToBuffer(&i, ch))
                 {
@@ -321,23 +343,94 @@ Token getNextToken( )
             categorizeToken(&token, 3);
             return token;
         }
-        else if(strchr(specialCharacters,ch))
+else if(strchr(specialCharacters,ch))
+{
+    Token token;
+
+    /* ---------------- OPENING BRACKETS ---------------- */
+    if(strchr(openbrackets, ch))
+    {
+        openbracketscount++;
+
+        if(bracketTop >= MAX_BRACKET_STACK - 1)
         {
-            if(strchr(openbrackets,ch))
-            {
-                openbracketscount++;
-            }
-            if(strchr(closebrackets,ch))
-            {
-                closebracketscount++;
-            }
-            Token token;
-            buffer[0]=ch;
-            buffer[1]='\0';
-            strcpy(token.lexeme,buffer);
-            categorizeToken(&token,4);
+            printf("\nError in Line %d: Bracket stack overflow\n",
+                   linecount);
+
+            errorflag = 1;
+
+            token.lexeme[0] = ch;
+            token.lexeme[1] = '\0';
+            token.type = UNKNOWN;
+
             return token;
         }
+
+        bracketTop++;
+
+        bracketStack[bracketTop] = ch;
+        bracketLineStack[bracketTop] = linecount;
+    }
+
+    /* ---------------- CLOSING BRACKETS ---------------- */
+    else if(strchr(closebrackets, ch))
+    {
+        closebracketscount++;
+
+        /* No opening bracket exists */
+        if(bracketTop == -1)
+        {
+            printf("\nError in Line %d: Unexpected closing bracket '%c'\n",
+                   linecount, ch);
+
+            errorflag = 1;
+
+            token.lexeme[0] = ch;
+            token.lexeme[1] = '\0';
+            token.type = UNKNOWN;
+
+            return token;
+        }
+
+        /*
+         * Closing bracket exists, but check whether
+         * it matches the most recent opening bracket.
+         */
+        if(!isMatchingBracket(bracketStack[bracketTop], ch))
+        {
+            printf("\nError in Line %d: Bracket mismatch. "
+                   "Opening '%c' from Line %d cannot be closed by '%c'\n",
+                   linecount,
+                   bracketStack[bracketTop],
+                   bracketLineStack[bracketTop],
+                   ch);
+
+            errorflag = 1;
+
+            token.lexeme[0] = ch;
+            token.lexeme[1] = '\0';
+            token.type = UNKNOWN;
+
+            return token;
+        }
+
+        /*
+         * Correct matching pair.
+         * Remove opening bracket from stack.
+         */
+        bracketTop--;
+    }
+
+    /* Return the bracket/special character normally */
+    buffer[0] = ch;
+    buffer[1] = '\0';
+
+    strcpy(token.lexeme, buffer);
+    categorizeToken(&token, 4);
+
+    return token;
+}
+
         else if(ch == '"')
         {
              int i = 0;
@@ -597,159 +690,156 @@ int isOperator(const char* str)
 
 }
 int isConstant(char *str)
+
 {
     int i = 0;
     int dotCount = 0;
 
-    /* Empty string */
-    if (str[0] == '\0')
+    if(str[0] == '\0')
+    {
+        printf("\nError in Line %d: Empty numeric constant\n", linecount);
+        errorflag = 1;
         return 0;
-
-    /* Optional negative sign */
-    if (str[i] == '-')
-    {
-        i++;
-
-        /* Only "-" is not a constant */
-        if (str[i] == '\0')
-            return 0;
     }
 
-    /* -------------------------------------------------
-       HEXADECIMAL CONSTANT
-       ------------------------------------- */
-    if (str[i] == '0' &&
-        (str[i + 1] == 'x' || str[i + 1] == 'X'))
+    /* '-' is now always tokenized as an operator, not part of a constant. */
+
+    /* ---------------- HEXADECIMAL ---------------- */
+    if(str[i] == '0' && (str[i + 1] == 'x' || str[i + 1] == 'X'))
     {
         i += 2;
 
-        /* At least one hexadecimal digit required */
-        if (str[i] == '\0')
+        if(str[i] == '\0')
         {
-            printf("At least one hexadecimal digit required\n");
+            printf("\nError in Line %d: At least one hexadecimal digit required: %s\n",
+                   linecount, str);
             errorflag = 1;
             return 0;
         }
 
-        while (str[i] != '\0')
+        while(str[i] != '\0')
         {
-            if (!isxdigit((unsigned char)str[i]))
+            if(!isxdigit((unsigned char)str[i]))
             {
-                printf("Invalid hexadecimal digit %c\n", str[i]);
+                printf("\nError in Line %d: Invalid hexadecimal constant %s (bad character '%c')\n",
+                       linecount, str, str[i]);
                 errorflag = 1;
                 return 0;
             }
-
             i++;
         }
 
         return 1;
     }
 
-    /* -------------------------------------------------
-       BINARY CONSTANT
-       
-       ------------------------------------------------- */
-    if (str[i] == '0' &&
-        (str[i + 1] == 'b' || str[i + 1] == 'B'))
+    /* ---------------- BINARY ---------------- */
+    if(str[i] == '0' && (str[i + 1] == 'b' || str[i + 1] == 'B'))
     {
         i += 2;
 
-        /* At least one binary digit required */
-        if (str[i] == '\0')
+        if(str[i] == '\0')
         {
-            printf("At least one binary digit required\n");
+            printf("\nError in Line %d: At least one binary digit required: %s\n",
+                   linecount, str);
             errorflag = 1;
             return 0;
         }
 
-        while (str[i] != '\0')
+        while(str[i] != '\0')
         {
-            if (str[i] != '0' && str[i] != '1')
+            if(str[i] != '0' && str[i] != '1')
             {
-                printf("Invalid binary digit %c\n", str[i]);
+                printf("\nError in Line %d: Invalid binary constant %s (bad character '%c')\n",
+                       linecount, str, str[i]);
                 errorflag = 1;
                 return 0;
             }
-
             i++;
         }
 
         return 1;
     }
 
-    /* -------------------------------------------------
-       OCTAL CONSTANT
-       
-       ------------------------------------------------- */
-    if (str[i] == '0' &&
-        isdigit((unsigned char)str[i + 1]))
+    /* ---------------- OCTAL ---------------- */
+    if(str[i] == '0' &&
+       isdigit((unsigned char)str[i + 1]) &&
+       strchr(str, '.') == NULL)
     {
         i++;
 
-        while (str[i] != '\0')
+        while(str[i] != '\0')
         {
-            if (str[i] < '0' || str[i] > '7')
+            if(str[i] < '0' || str[i] > '7')
             {
-                printf("Invalid octal digit %c\n", str[i]);
+                printf("\nError in Line %d: Invalid octal constant %s (bad character '%c')\n",
+                       linecount, str, str[i]);
                 errorflag = 1;
                 return 0;
             }
-
             i++;
         }
 
         return 1;
     }
+/* ---------------- DECIMAL / FLOAT ---------------- */
 
-    /* -------------------------------------------------
-       DECIMAL / FLOATING POINT CONSTANT
-      
-       ------------------------------------------------- */
+/* Optional negative sign */
+if(str[i] == '-')
+{
+    i++;
 
-    while (str[i] != '\0')
+    /* "-" alone is not a valid constant */
+    if(str[i] == '\0')
     {
-        if (isdigit((unsigned char)str[i]))
-        {
-            i++;
-        }
-        else if (str[i] == '.')
-        {
-            dotCount++;
-
-            /* More than one decimal point */
-            if (dotCount > 1)
-            {
-                printf("More than one decimal point %s\n", str);
-                return 0;
-            }
-
-            /*
-             * Require a digit after the decimal point.
-             * Therefore:
-             * 12.   -> invalid
-             * 12.5  -> valid
-             */
-            if (!isdigit((unsigned char)str[i + 1]))
-            {
-                printf("Digit required after decimal point in %s\n", str);
-                errorflag = 1;
-                return 0;
-            }
-
-            i++;
-        }
-        else
-        {
-            /* Any other character makes it invalid */
-            printf("Invalid character %c in %s\n", str[i], str);    
-            errorflag = 1;
-            return 0;
-        }
+        printf("\nError in Line %d: Invalid numeric constant %s\n",
+               linecount, str);
+        errorflag = 1;
+        return 0;
     }
-
-    return 1;
 }
+while(str[i] != '\0')
+{
+    if(isdigit((unsigned char)str[i]))
+    {
+        i++;
+    }
+
+    else if(str[i] == '.')
+    {
+        dotCount++;
+
+        if(dotCount > 1)
+        {
+            printf("\nError in Line %d: More than one decimal point in %s\n",
+                   linecount, str);
+            errorflag = 1;
+            return 0;
+        }
+
+        /* Require digit after decimal point */
+        if(!isdigit((unsigned char)str[i + 1]))
+        {
+            printf("\nError in Line %d: Digit required after decimal point in %s\n",
+                   linecount, str);
+            errorflag = 1;
+            return 0;
+        }
+
+        i++;
+    }
+
+    else
+    {
+        printf("\nError in Line %d: Invalid numeric constant %s (bad character '%c')\n",
+               linecount, str, str[i]);
+        errorflag = 1;
+        return 0;
+    }
+}
+
+return 1;
+}
+
 
 
 
