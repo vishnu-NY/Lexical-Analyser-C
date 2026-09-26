@@ -289,7 +289,6 @@ Token getNextToken( )
                 /* '.' belongs to a possible number, so do not stop on it. */
                 if((ch != '.' && isCandidateDelimiter(ch)))
                 {
-                    ungetc(ch, fp);
                     break;
                 }
 
@@ -600,6 +599,14 @@ else if(strchr(specialCharacters,ch))
             return token;
         }
     }
+         if(bracketTop != -1)
+        {
+            printf("\nError: Unclosed bracket '%c' opened in Line %d\n",
+                bracketStack[bracketTop],
+                bracketLineStack[bracketTop]);
+
+            errorflag = 1;
+        }
         //while loop ends meaning reached EOF
                  Token token;
                strcpy(token.lexeme,"");
@@ -721,8 +728,8 @@ int isConstant(char *str)
         {
             if(!isxdigit((unsigned char)str[i]))
             {
-                printf("\nError in Line %d: Invalid hexadecimal constant %s (bad character '%c')\n",
-                       linecount, str, str[i]);
+                printf("\nError in Line %d: Invalid hexadecimal constant %s \n",
+                       linecount, str);
                 errorflag = 1;
                 return 0;
             }
@@ -749,8 +756,8 @@ int isConstant(char *str)
         {
             if(str[i] != '0' && str[i] != '1')
             {
-                printf("\nError in Line %d: Invalid binary constant %s (bad character '%c')\n",
-                       linecount, str, str[i]);
+                printf("\nError in Line %d: Invalid binary constant %s\n",
+                       linecount, str);
                 errorflag = 1;
                 return 0;
             }
@@ -771,8 +778,8 @@ int isConstant(char *str)
         {
             if(str[i] < '0' || str[i] > '7')
             {
-                printf("\nError in Line %d: Invalid octal constant %s (bad character '%c')\n",
-                       linecount, str, str[i]);
+                printf("\nError in Line %d: Invalid octal constant %s\n",
+                       linecount, str);
                 errorflag = 1;
                 return 0;
             }
@@ -830,8 +837,8 @@ while(str[i] != '\0')
 
     else
     {
-        printf("\nError in Line %d: Invalid numeric constant %s (bad character '%c')\n",
-               linecount, str, str[i]);
+        printf("\nError in Line %d: Invalid numeric constant %s\n",
+               linecount, str);
         errorflag = 1;
         return 0;
     }
