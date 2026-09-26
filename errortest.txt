@@ -1,0 +1,22 @@
+int main()
+{
+    int good_value = 10;
+
+    int 123abc = 5;
+    int bad$name = 7;
+
+    int hex = 0x12G;
+    int bin = 0b102;
+    int oct = 078;
+    float x = 12.3.4;
+
+    char *s1 = "Hello world";
+    char *s2 = "Unclosed string;
+
+    if ((good_value > 5)
+    {
+        good_value++;
+    }
+
+    return 0;
+}

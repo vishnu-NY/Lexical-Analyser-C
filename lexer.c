@@ -96,6 +96,8 @@ Token getNextToken( )
         else if(ch =='#')
         {
             while((ch=getc(fp))!=EOF && ch!='\n');
+             if(ch == '\n')
+                linecount++;
             continue;
         }
         else if(ch =='/')
@@ -108,6 +110,7 @@ Token getNextToken( )
             }
             else if(ch=='*')
             {
+                char commentClosed=0;   
                 while((ch=getc(fp))!=EOF)
                 {
                     if(ch=='\n')
@@ -117,12 +120,30 @@ Token getNextToken( )
                     if(ch=='*')
                     {
                         if((ch=getc(fp))=='/')
-                            break;
+                           {
+                            commentClosed=1;
+                             break; 
+                           }
+
                         else
                             ungetc(ch,fp);
                     }
-                    continue;
+                
+                   
                 }
+                 if(!commentClosed)
+                {
+                    Token token;
+                    strcpy(token.lexeme, "/*");
+                    token.type = UNKNOWN;
+
+                    printf("\nError in Line %d: Unterminated multi-line comment\n", linecount);
+                    errorflag = 1;
+                    return token;
+                }
+                 continue;
+
+
                 
             }
             else if(ch == '=')
@@ -152,34 +173,36 @@ Token getNextToken( )
                 categorizeToken(&token, 3);
 
                 return token;
-    
-
         }
 
     }
         else if(isalpha(ch) || ch=='_' || ch=='$')
         {
-            int i=0;
-            buffer[i++]=ch;
-            while((ch=getc(fp))!=EOF && (isalnum(ch) || ch=='_' || ch=='$'))
+            int i = 0;
+            appendToBuffer(&i, ch);
+
+            while((ch = getc(fp)) != EOF && !isCandidateDelimiter(ch))
+            {
+                if(!appendToBuffer(&i, ch))
                 {
-                    buffer[i]=ch;
-                     i++;
+                    Token token;
+                    strcpy(token.lexeme, buffer);
+                    token.type = UNKNOWN;
+                    return token;
                 }
-                
-              if(ch != EOF)  ungetc(ch, fp);  
-            buffer[i]='\0';
-          // printf("Buffer = %s\n",buffer);
-            
-          //  printf("before token");
+            }
+
+            if(ch != EOF)
+                ungetc(ch, fp);
+
+            buffer[i] = '\0';
+
             Token token;
-            strcpy(token.lexeme,buffer);
-          //  printf("Token = %s, ",token.lexeme);
-            categorizeToken(&token,1);
-         
+            strcpy(token.lexeme, buffer);
+            categorizeToken(&token, 1);
             return token;
         }
-        
+        /*--------------------------N O T E        N O T   U S E F U L-----------------------------*/
         else if(ch=='-')
         {
             if(isdigit(ch=getc(fp)) && previoustoken!=5)
@@ -239,169 +262,63 @@ Token getNextToken( )
         }
         else if(isdigit(ch))
         {
-                        if(ch=='0')
-                        {
-                            ch=getc(fp);
-                            if(ch=='x' || ch=='X')
-                            {
-                                int i=0;
-                                buffer[i++]='0';
-                                buffer[i++]=ch;
-                                while((ch=getc(fp))!=EOF && (isxdigit(ch)))
-                                    {
-                                        buffer[i]=ch;
-                                        i++;
-                                    }
-                                buffer[i]='\0';
-                                ungetc(ch,fp);
-                                Token token;
-                                strcpy(token.lexeme,buffer);
-                                categorizeToken(&token,2);
-                                return token;
-                            }
-                            
-                            else if(ch=='b' || ch=='B')
-                            {
-                                int i=0;
-                                buffer[i++]='0';
-                                buffer[i++]=ch;
-                                while((ch=getc(fp))!=EOF && (ch=='0' || ch=='1'))
-                                    {
-                                        buffer[i]=ch;
-                                        i++;
-                                    }
-                                buffer[i]='\0';
-                                ungetc(ch,fp);
-                                Token token;
-                                strcpy(token.lexeme,buffer);
-                                categorizeToken(&token,2);
-                                return token;
-                            }
-                            
-                            else if(ch<= '7' && ch>='0')
-                            {
-                                int i=0;
-                                buffer[i++]='0';
-                                buffer[i++]=ch;
-                                while(((ch=getc(fp))!=EOF) && ((ch<='7' && ch>='0'))||((ch=='.')||ch==' '))
-                                    {
-                                        buffer[i]=ch;
-                                        i++;
-                                    }
-                                    if(isdigit(ch))
-                                    {
-                                        buffer[i]='\0';
-                                        Token token;
-                                        strcpy(token.lexeme,buffer);
-                                        printf("\nError in Line %d, Error: %s \n", linecount, buffer);
-                                        errorflag=1;    
-                                        //error : invalid octal number
-                                        categorizeToken(&token,8);
-                                        return token;
-                                    }
+            int i = 0;
+            appendToBuffer(&i, ch);
 
-                                buffer[i]='\0';
-                                ungetc(ch,fp);
-                                Token token;
-                                strcpy(token.lexeme,buffer);
-                                categorizeToken(&token,2);
-                                return token;
-                            }
-                            else if(strchr(singleoperators,ch) || strchr(specialCharacters,ch) || ch==' ' || ch=='\n')
-                            {
-                                ungetc(ch,fp);
-                                ch='0';
-                                Token token;
-                                buffer[0]='0';
-                                buffer[1]='\0';
-                                strcpy(token.lexeme,buffer);
-                                categorizeToken(&token,2);
-                                return token;
-                            }
-                            else
-                            {
-                                ungetc(ch,fp);
-                                ch='0';
-                                printf("Error in Line %d, Error: Invalid number format\n", linecount);
-                                errorflag=1;
-                                Token token;
-                                buffer[0]='0';
-                                buffer[1]='\0';
-                                strcpy(token.lexeme,buffer);
-                                categorizeToken(&token,8);
-                                return token;
-                            }
-
-                        }
-                    
-            int i=0,dotflag=0;
-            buffer[i++]=ch;
-            temp=ch;
-            if(!(isdigit(ch=getc(fp))) && (!(strchr(singleoperators,ch))) && (!(strchr(specialCharacters,ch))) )
+            while((ch = getc(fp)) != EOF)
             {
-                buffer[i++]=ch;
-                while(isalnum(ch=getc(fp)))
+                /* '.' belongs to a possible number, so do not stop on it. */
+                if(ch != '.' && isCandidateDelimiter(ch))
+                    break;
+
+                if(!appendToBuffer(&i, ch))
                 {
-                    buffer[i]=ch;
-                     i++;
+                    Token token;
+                    strcpy(token.lexeme, buffer);
+                    token.type = UNKNOWN;
+                    return token;
                 }
-                buffer[i]='\0';
-
-                printf("\nError in Line %d, Error: %s \n", linecount, buffer);
-                printf("Error: Invalid number format from isdigit section\n");
-                errorflag=1;
-                Token token;
-                strcpy(token.lexeme,buffer);
-                categorizeToken(&token,8);
-                return token;
-            }
-            else
-            {
-                ungetc(ch,fp);
-                ch=temp;
             }
 
-            while((ch=getc(fp))!=EOF && ( isdigit(ch) ||(ch=='.' && dotflag==0)))
-                {
-                    if(ch=='.') dotflag=1;
-                    buffer[i]=ch;
-                     i++;
-                }
-            buffer[i]='\0';
-            ungetc(ch,fp);
+            if(ch != EOF)
+                ungetc(ch, fp);
+
+            buffer[i] = '\0';
+
             Token token;
-            strcpy(token.lexeme,buffer);
-            categorizeToken(&token,2);
+            strcpy(token.lexeme, buffer);
+            categorizeToken(&token, 2);
             return token;
+                        
         }
         else if(strchr(singleoperators,ch))
         {
-           // printf("Entered singl operator part\n");
             Token token;
-            buffer[0]=ch;
-            if(strchr(singleoperators,ch=getc(fp)))
+            int first = ch;
+            int next = getc(fp);
+
+            buffer[0] = (char)first;
+            buffer[1] = '\0';
+
+            if(next != EOF)
             {
-               // printf("In if condition");
-                buffer[1]=ch;
-                buffer[2]='\0';
-                for(int j=0;j<19;j++)
+                char doubleBuffer[3];
+                doubleBuffer[0] = (char)first;
+                doubleBuffer[1] = (char)next;
+                doubleBuffer[2] = '\0';
+
+                if(isOperator(doubleBuffer) == 2)
                 {
-                     //printf("in for loop");
-                    if(strcmp(doubleoperators[j],buffer)==0)
-                    {
-                        strcpy(token.lexeme,buffer);
-                         categorizeToken(&token,3);
-                         return token;
-                    }
-                   
+                    strcpy(token.lexeme, doubleBuffer);
+                    categorizeToken(&token, 3);
+                    return token;
                 }
 
+                ungetc(next, fp);
             }
-            //printf("Reached here");
-            ungetc(ch,fp);
-            buffer[1]='\0';
-            strcpy(token.lexeme,buffer);
-            categorizeToken(&token,3);
+
+            strcpy(token.lexeme, buffer);
+            categorizeToken(&token, 3);
             return token;
         }
         else if(strchr(specialCharacters,ch))
@@ -423,27 +340,126 @@ Token getNextToken( )
         }
         else if(ch == '"')
         {
-            int i=1;
+             int i = 0;
+            int escaped = 0;
             Token token;
-            buffer[0]=ch;
-            while((ch=getc(fp)) != '"' )
+
+            appendToBuffer(&i, ch);
+
+            while((ch = getc(fp)) != EOF)
             {
-                if(ch==EOF || ch=='\n')
+                if(ch == '\n' && !escaped)
                 {
-                     printf("\nError in Line %d, Error: %s \n", linecount, buffer);
-                     errorflag=1;
-                    categorizeToken(&token,8);
+                    buffer[i] = '\0';
+                    strcpy(token.lexeme, buffer);
+                    token.type = UNKNOWN;
+
+                    printf("\nError in Line %d: Unterminated string literal: %s\n",
+                           linecount, buffer);
+                    linecount++;
+                    errorflag = 1;
                     return token;
                 }
-                buffer[i]=ch;
-                i++;
+
+                if(!appendToBuffer(&i, ch))
+                {
+                    strcpy(token.lexeme, buffer);
+                    token.type = UNKNOWN;
+                    return token;
+                }
+
+                if(ch == '"' && !escaped)
+                {
+                    buffer[i] = '\0';
+                    strcpy(token.lexeme, buffer);
+                    categorizeToken(&token, 5);
+                    return token;
+                }
+
+                if(ch == '\\' && !escaped)
+                    escaped = 1;
+                else
+                    escaped = 0;
             }
-            buffer[i] = ch; i++; 
-            buffer[i]='\0';
-            strcpy(token.lexeme,buffer);
-            categorizeToken(&token,5);
+
+            buffer[i] = '\0';
+            strcpy(token.lexeme, buffer);
+            token.type = UNKNOWN;
+            printf("\nError in Line %d: Unterminated string literal: %s\n", linecount, buffer);
+            errorflag = 1;
+            return token;
+        }
+
+        /* ---------------- CHARACTER LITERAL ---------------- */
+        else if(ch == '\'')
+        {
+            int i = 0;
+            int escaped = 0;
+            int contentCount = 0;
+            Token token;
+
+            appendToBuffer(&i, ch);
+
+            while((ch = getc(fp)) != EOF)
+            {
+                if(ch == '\n' && !escaped)
+                {
+                    buffer[i] = '\0';
+                    strcpy(token.lexeme, buffer);
+                    token.type = UNKNOWN;
+                    printf("\nError in Line %d: Unterminated character literal: %s\n",
+                           linecount, buffer);
+                    linecount++;
+                    errorflag = 1;
+                    return token;
+                }
+
+                if(!appendToBuffer(&i, ch))
+                {
+                    strcpy(token.lexeme, buffer);
+                    token.type = UNKNOWN;
+                    return token;
+                }
+
+                if(ch == '\'' && !escaped)
+                {
+                    buffer[i] = '\0';
+
+                    if(contentCount != 1)
+                    {
+                        strcpy(token.lexeme, buffer);
+                        token.type = UNKNOWN;
+                        printf("\nError in Line %d: Invalid character literal: %s\n",
+                               linecount, buffer);
+                        errorflag = 1;
+                        return token;
+                    }
+
+                    strcpy(token.lexeme, buffer);
+                    categorizeToken(&token, 6);
+                    return token;
+                }
+
+                if(ch == '\\' && !escaped)
+                {
+                    escaped = 1;
+                    /* '\\x' represents one logical character. */
+                }
+                else
+                {
+                    contentCount++;
+                    escaped = 0;
+                }
+            }
+
+            buffer[i] = '\0';
+            strcpy(token.lexeme, buffer);
+            token.type = UNKNOWN;
+            printf("\nError in Line %d: Unterminated character literal: %s\n", linecount, buffer);
+            errorflag = 1;
             return token;
         } 
+        /*----------------N O T   U S E D---------------------------------------------------------------*/
         else if((int)ch == 39) // single quot
         {
             int i=0;
