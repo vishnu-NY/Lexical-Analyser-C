@@ -21,7 +21,7 @@ extern int closebracketscount;
         return 1;
     }
     Token token;
-    while((token = getNextToken()).type != TOKEN_EOF && errorflag==0)
+    while(((token = getNextToken()).type != TOKEN_EOF) && (token.type != UNKNOWN) && (errorflag==0))
     {
         char* typename;
         switch(token.type)
@@ -59,7 +59,7 @@ extern int closebracketscount;
         previoustoken=token.type;
         
     }
-    if(openbracketscount != closebracketscount && errorflag==0)
+    if(openbracketscount != closebracketscount && errorflag==0 &&(token.type != UNKNOWN))
     {
         printf("\nError: Mismatched brackets detected. Open brackets count: %d, Close brackets count: %d\n", openbracketscount, closebracketscount);
     }

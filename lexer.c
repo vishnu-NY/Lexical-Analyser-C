@@ -627,6 +627,7 @@ int isConstant(char *str)
         if (str[i] == '\0')
         {
             printf("At least one hexadecimal digit required\n");
+            errorflag = 1;
             return 0;
         }
 
@@ -635,6 +636,7 @@ int isConstant(char *str)
             if (!isxdigit((unsigned char)str[i]))
             {
                 printf("Invalid hexadecimal digit %c\n", str[i]);
+                errorflag = 1;
                 return 0;
             }
 
@@ -657,6 +659,7 @@ int isConstant(char *str)
         if (str[i] == '\0')
         {
             printf("At least one binary digit required\n");
+            errorflag = 1;
             return 0;
         }
 
@@ -665,6 +668,7 @@ int isConstant(char *str)
             if (str[i] != '0' && str[i] != '1')
             {
                 printf("Invalid binary digit %c\n", str[i]);
+                errorflag = 1;
                 return 0;
             }
 
@@ -688,6 +692,7 @@ int isConstant(char *str)
             if (str[i] < '0' || str[i] > '7')
             {
                 printf("Invalid octal digit %c\n", str[i]);
+                errorflag = 1;
                 return 0;
             }
 
@@ -728,6 +733,7 @@ int isConstant(char *str)
             if (!isdigit((unsigned char)str[i + 1]))
             {
                 printf("Digit required after decimal point in %s\n", str);
+                errorflag = 1;
                 return 0;
             }
 
@@ -737,6 +743,7 @@ int isConstant(char *str)
         {
             /* Any other character makes it invalid */
             printf("Invalid character %c in %s\n", str[i], str);    
+            errorflag = 1;
             return 0;
         }
     }
