@@ -40,6 +40,41 @@ short int identifier=-1;
 char buffer[MAX_TOKEN_SIZE];
 extern FILE* fp;
 int i=10;
+
+static int isCandidateDelimiter(int c)
+{
+    if(c == EOF || isspace((unsigned char)c))
+        return 1;
+
+    if(strchr(specialCharacters, c))
+        return 1;
+
+    if(strchr(singleoperators, c))
+        return 1;
+
+    if(c == '"' || c == '\'')
+        return 1;
+
+    return 0;
+}
+
+static int appendToBuffer(int *index, int c)
+{
+    if(*index >= MAX_TOKEN_SIZE - 1)
+    {
+        buffer[MAX_TOKEN_SIZE - 1] = '\0';
+        printf("\nError in Line %d: Token too long: %s\n", linecount, buffer);
+        errorflag = 1;
+        return 0;
+    }
+
+    buffer[(*index)++] = (char)c;
+    return 1;
+}
+
+
+
+
 Token getNextToken( )
 {
    // printf("Getting next token\n");
