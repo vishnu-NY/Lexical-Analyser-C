@@ -761,6 +761,7 @@ int isIdentifier(const char* str)
     if(!(isalpha((unsigned char)str[0]) || str[0] == '_' || str[0] == '$'))
     {
         printf("\nError in Line %d, Error: %s \n", linecount, str);
+        printf("Identifiers must start with a letter, underscore, or dollar sign.\n");
         errorflag=1;
         return 0;
     }
@@ -770,7 +771,12 @@ int isIdentifier(const char* str)
     while(str[i] != '\0')
     {
         if(!(isalnum((unsigned char)str[i]) || str[i] == '_'))
+        {
+            printf("\nError in Line %d, Error: %s \n", linecount, str);
+            printf("Identifiers can only contain letters, digits, underscores, or dollar signs.\n");
+            errorflag=1;
             return 0;
+        }
 
         i++;
     }

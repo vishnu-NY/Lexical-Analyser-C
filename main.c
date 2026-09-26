@@ -30,10 +30,10 @@ extern int closebracketscount;
             typename = "Keyword";
             break;
             case 1 :
-            typename = "Single Oprator";
+            typename = "Operator";
             break;
             case 2 :
-            typename = "Double Operator";
+            typename = "Operator";
             break;
             case 3 :
             typename = "Special Character";
